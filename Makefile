@@ -1,2 +1,2 @@
 default:
-	g++ -o server -Wall main.cpp
+	g++ -o server -Werror *.cpp
