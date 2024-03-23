@@ -21,12 +21,10 @@ void connection::handle_connection(int client_fd) {
   
   char *file_to_open = buffer + 5;
   *strchr(file_to_open, ' ') = 0; // when we reach a space, we set the byte to \0
- 
-  std::cout << file_to_open << std::endl;
 
   // if requested file is "/", then change file_to_open to index.html
   const char *default_page = "index.html";
-  if (file_to_open == "") {
+  if (file_to_open[0] == '\0') {
     strcpy(file_to_open, default_page);
   }
 
@@ -34,23 +32,36 @@ void connection::handle_connection(int client_fd) {
 
 
   /* Respond To Client */
+  char HTTP_STATUS[32];
+
   int opened_file = open(file_to_open, O_RDONLY); // Open our file
+  
+  // If file fails to open, which most of the time will only be caused by it not existing, set the file to 404.html.
+  if (opened_file == -1) {
+    opened_file = open("404.html", O_RDONLY);
+    strcpy(HTTP_STATUS, "HTTP/1.1 404 NOT FOUND");
+  } else {
+    strcpy(HTTP_STATUS, "HTTP/1.1 200 OK");
+  }
+
   struct stat fst; // Create FSTAT structure to hold information about our file, however we will just use this for getting the amount of bytes in the file :)
-  fstat(opened_file, &fst);
+  fstat(opened_file, &fst); // populate the structure
   int size = fst.st_size; // set size to the size in the fstat struture
 
   // Respond with HTTP headers here
-  char response_ok[64];
-  sprintf(response_ok, "HTTP/1.1 200 OK\r\nContent-Length: %i\r\n\r\n", size); // the ending double CRLF tells the client that the HTTP headers have ended, and it is now the file that is being sent.
-  std::cout << "Responded with: " << response_ok << std::endl;
+  char response[64];
 
-  if (send(client_fd, response_ok, strlen(response_ok), 0) == -1) {
+  sprintf(response, "%s\r\nContent-Length: %i\r\n\r\n", HTTP_STATUS, size); // the ending double CRLF tells the client that the HTTP headers have ended, and it is now the file that is being sent.
+  std::cout << "Responded with: " << response << std::endl;
+
+  if (send(client_fd, response, strlen(response), 0) == -1) { // send back HTTP Headers
     connection::error("Failed to send back data", errno);
   }
 
+
+  // Send File
   if (sendfile(client_fd, opened_file, 0, size) == -1) {
-    // 42 is size of file but is temp rn
-    connection::error("Serving html failed", errno);
+    connection::error("Serving data failed", errno);
   }
 
   close(opened_file);
