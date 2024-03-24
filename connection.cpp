@@ -14,10 +14,14 @@ void connection::error(std::string msg, int err_no) {
   exit(1);
 }
 
-void connection::handle_connection(int client_fd) {
+void *connection::handle_connection(void *client) {
+  pthread_detach(pthread_self()); // deatch our thread from what called it
+
+  int *client_fd = (int*)(client); // cast the value from the void pointer
+
   /* Read Data That We Recieved */
   char buffer[512] = {0};
-  read(client_fd, buffer, sizeof(buffer));
+  read(*client_fd, buffer, sizeof(buffer));
   
   char *file_to_open = buffer + 5;
   *strchr(file_to_open, ' ') = 0; // when we reach a space, we set the byte to \0
@@ -54,15 +58,20 @@ void connection::handle_connection(int client_fd) {
   sprintf(response, "%s\r\nContent-Length: %i\r\n\r\n", HTTP_STATUS, size); // the ending double CRLF tells the client that the HTTP headers have ended, and it is now the file that is being sent.
   std::cout << "Responded with: " << response << std::endl;
 
-  if (send(client_fd, response, strlen(response), 0) == -1) { // send back HTTP Headers
+  if (send(*client_fd, response, strlen(response), 0) == -1) { // send back HTTP Headers
     connection::error("Failed to send back data", errno);
   }
 
 
   // Send File
-  if (sendfile(client_fd, opened_file, 0, size) == -1) {
+  if (sendfile(*client_fd, opened_file, 0, size) == -1) {
     connection::error("Serving data failed", errno);
   }
 
+
+  /* Cleanup */
   close(opened_file);
+  close(*client_fd);
+
+  pthread_exit(NULL);
 }

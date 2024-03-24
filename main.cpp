@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "connection.hpp"
 
@@ -38,7 +39,7 @@ int main(int argc, char **argv) {
     connection::error("Failed to listen for incoming connections", errno);
   }
 
-  std::cout << "Listening on 127.0.0.1:" << PORT << std::endl;
+  std::cout << "Listening on http://127.0.0.1:" << PORT << std::endl;
 
   /* Main Loop */
   while (true) {
@@ -51,8 +52,12 @@ int main(int argc, char **argv) {
    if (client_fd == -1) {
      connection::error("Accepting failed", errno);
    }
-   
-   connection::handle_connection(client_fd);
+  
+
+   /* Create New Thread */
+   pthread_t thread_id; // store our thread id
+   pthread_create(&thread_id, NULL, connection::handle_connection, (void*)&client_fd);
+   pthread_join(thread_id, NULL); // waits for thread to execute
   }
 
   return 0;

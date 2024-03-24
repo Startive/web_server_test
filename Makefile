@@ -1,2 +1,2 @@
 default:
-	g++ -o server -Werror *.cpp
+	g++ -o server -lpthread -Wall -Werror *.cpp
