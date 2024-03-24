@@ -14,6 +14,26 @@ void connection::error(std::string msg, int err_no) {
   exit(1);
 }
 
+
+// this function is a shitty fix to people requesting a url like /2*10^2
+char *connection::get_file_from_headers(char headers[512]) {
+  char *file_to_open = headers + 5; 
+  if (strchr(file_to_open, ' ') == NULL) {  // when we reach a space, we set the byte to \0
+    strcpy(file_to_open, "404.html");
+  } else {
+    *strchr(file_to_open, ' ') = 0;
+  }
+
+  return file_to_open;
+}
+
+
+
+void connection::cleanup(int fd1, int fd2) {
+  close(fd1);
+  close(fd2);
+}
+
 void *connection::handle_connection(void *client) {
   pthread_detach(pthread_self()); // deatch our thread from what called it
 
@@ -22,9 +42,8 @@ void *connection::handle_connection(void *client) {
   /* Read Data That We Recieved */
   char buffer[512] = {0};
   read(*client_fd, buffer, sizeof(buffer));
-  
-  char *file_to_open = buffer + 5;
-  *strchr(file_to_open, ' ') = 0; // when we reach a space, we set the byte to \0
+
+  char *file_to_open = connection::get_file_from_headers(buffer);
 
   // if requested file is "/", then change file_to_open to index.html
   const char *default_page = "index.html";
@@ -58,6 +77,7 @@ void *connection::handle_connection(void *client) {
   sprintf(response, "%s\r\nContent-Length: %i\r\n\r\n", HTTP_STATUS, size); // the ending double CRLF tells the client that the HTTP headers have ended, and it is now the file that is being sent.
   std::cout << "Responded with: " << response << std::endl;
 
+
   if (send(*client_fd, response, strlen(response), 0) == -1) { // send back HTTP Headers
     connection::error("Failed to send back data", errno);
   }
@@ -70,8 +90,7 @@ void *connection::handle_connection(void *client) {
 
 
   /* Cleanup */
-  close(opened_file);
-  close(*client_fd);
-
+  connection::cleanup(opened_file, *client_fd);
+  
   pthread_exit(NULL);
 }
