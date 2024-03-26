@@ -1,2 +1,5 @@
 .vscode
 server
+server_debug
+core.*
+core-server_debug.*
