@@ -2,11 +2,14 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include <unistd.h>
 #include <cstring>
+#include <cstdlib>
 #include <sys/sendfile.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 
 // HTTP codes and files
 const char *HTTP_404 = "404 NOT FOUND";
@@ -19,15 +22,15 @@ const char *HTTP_200 = "200 OK";
 const char *default_page = "index.html";
 
 
-void connection::error(std::string msg, int err_no) {
+void connection::error(std::string msg) {
   std::cout << msg << std::endl;
-  std::cout << "Errno: " << err_no << std::endl; 
+  std::cout << "Errno: " << errno << std::endl; 
   
   exit(1);
 }
 
 
-void connection::get_response(char headers[4096], connection::Response *response) {
+void connection::get_response(char *headers, connection::Response *response) {
   /*Initalize variables, HTTP response codes and HTML strings */
 
   char HTTP_STATUS[32];
@@ -95,9 +98,21 @@ void *connection::handle_connection(void *client) {
 
   int *client_fd = (int*)(client); // cast the value from the void pointer
 
+
   /* Read Data That We Recieved */
-  char buffer[4096] = {0};
-  read(*client_fd, buffer, sizeof(buffer));
+  char buffer[4096];
+ /* 
+  // Peak at message
+  ssize_t bytes_read = recv(*client_fd, buffer, sizeof(buffer), MSG_PEEK);
+  if (bytes_read == -1) {
+    connection::error("Failed to peak at msg");
+  }
+*/
+  // Read Data Normally
+  //std::cout << bytes_read << std::endl;
+  if (recv(*client_fd, buffer, sizeof(buffer), 0) == -1) {
+    connection::error("Failed to recieve messages from client properly.");
+  }
 
 
   /* Pass Buffer Into Function With Struct*/
@@ -107,12 +122,12 @@ void *connection::handle_connection(void *client) {
 
   /* Respond To Client */
   if (send(*client_fd, response.HTTP_RESPONSE, strlen(response.HTTP_RESPONSE), 0) == -1) { // send back HTTP Headers
-    connection::error("Failed to send back data", errno);
+    connection::error("Failed to send back data");
   }
 
   // Send File
   if (sendfile(*client_fd, response.file_socket, 0, response.content_length) == -1) {
-   connection::error("Serving data failed", errno);
+   connection::error("Serving data failed");
   }
 
 

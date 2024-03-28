@@ -18,12 +18,12 @@ int main(int argc, char **argv) {
   int socket_fd = socket(AF_INET, SOCK_STREAM, 0); // create socket
 
   if (socket_fd == -1) {
-    connection::error("Failed to create socket", errno);
+    connection::error("Failed to create socket");
   }
 
   const int enable = 1; // weird C stuff in these 2 lines, but it works so what else could you have asked for?
   if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) == -1) { // makes it so address can be reused
-    connection::error("Setsockopt failed", errno);
+    connection::error("Setsockopt failed");
   }
 
 
@@ -35,16 +35,16 @@ int main(int argc, char **argv) {
   };
   
   if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) { // bind to 8080
-    connection::error("Failed to bind to port 8080", errno);
+    connection::error("Failed to bind to port 8080");
   }
 
   
   /* Listening */
   if (listen(socket_fd, 0) == -1) {
-    connection::error("Failed to listen for incoming connections", errno);
+    connection::error("Failed to listen for incoming connections");
   }
 
-  std::cout << "Listening on http://127.0.0.1:" << PORT << std::endl;
+  std::cout << "Now listening on http://127.0.0.1:" << PORT << "!" << std::endl;
 
   /* Main Loop */
   while (true) {
@@ -55,9 +55,9 @@ int main(int argc, char **argv) {
 
    int client_fd = accept(socket_fd, &socket_peer, &peer_len); 
    if (client_fd == -1) {
-     connection::error("Accepting failed", errno);
+     connection::error("Accepting failed");
    }
-  
+     
 
    /* Create New Thread */
    pthread_t thread_id; // store our thread id

@@ -3,7 +3,7 @@
 #include <string>
 
 namespace connection {
-  void error(std::string msg, int err_no);
+  void error(std::string msg);
 
   // Response structure that is populated by get_response
   typedef struct {
@@ -13,7 +13,7 @@ namespace connection {
   } Response;
 
   // Takes in HTTP headers and populates the connection::Response structure
-  void get_response(char headers[4096], connection::Response *response); // the code in this is REALLY shitty cause i overcomplicated it
+  void get_response(char *headers, connection::Response *response); // the code in this is REALLY shitty cause i overcomplicated it
 
   void cleanup(int fd1, int fd2);
 
